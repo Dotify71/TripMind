@@ -3,6 +3,7 @@ import math
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, RedirectResponse
+from pydantic import BaseModel
 import uvicorn
 import stripe
 from stripe._error import StripeError
