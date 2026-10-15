@@ -11,7 +11,11 @@ logger = logging.getLogger("tripmind.database")
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 if not DATABASE_URL:
-    DATABASE_URL = "sqlite:///./travel_planner.db"
+    # On Vercel / serverless platforms, only /tmp is writable
+    if os.environ.get("VERCEL") or os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+        DATABASE_URL = "sqlite:////tmp/travel_planner.db"
+    else:
+        DATABASE_URL = "sqlite:///./travel_planner.db"
 else:
     if DATABASE_URL.startswith("postgres://"):
         DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
