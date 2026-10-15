@@ -4,6 +4,10 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 
+import logging
+
+logger = logging.getLogger("tripmind.database")
+
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
 if not DATABASE_URL:
@@ -13,15 +17,34 @@ else:
         DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 connect_args = {}
-if DATABASE_URL.startswith("sqlite"):
-    connect_args = {"check_same_thread": False}
+engine_kwargs = {
+    "pool_pre_ping": True,
+}
 
-engine = create_engine(
-    DATABASE_URL,
-    pool_pre_ping=True,
-    pool_recycle=300,
-    connect_args=connect_args
-)
+if DATABASE_URL.startswith("sqlite"):
+    connect_args["check_same_thread"] = False
+else:
+    # Production PostgreSQL pool configuration
+    engine_kwargs.update({
+        "pool_size": int(os.environ.get("DB_POOL_SIZE", "10")),
+        "max_overflow": int(os.environ.get("DB_MAX_OVERFLOW", "20")),
+        "pool_recycle": 300,
+    })
+
+try:
+    engine = create_engine(
+        DATABASE_URL,
+        connect_args=connect_args,
+        **engine_kwargs
+    )
+except Exception as e:
+    logger.warning("Failed to initialize database engine with provided DATABASE_URL (%s). Falling back to SQLite: %s", DATABASE_URL, e)
+    DATABASE_URL = "sqlite:///./travel_planner.db"
+    engine = create_engine(
+        DATABASE_URL,
+        connect_args={"check_same_thread": False},
+        pool_pre_ping=True
+    )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
