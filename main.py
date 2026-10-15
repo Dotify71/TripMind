@@ -3,8 +3,6 @@ import math
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, RedirectResponse
-from pydantic import BaseModel
-from agent.travel_agent import TravelPlannerAgent
 import uvicorn
 import stripe
 from stripe._error import StripeError
@@ -23,10 +21,11 @@ init_db()
 # Initialize Stripe (API key will be set from environment)
 stripe.api_key = os.environ.get('STRIPE_SECRET_KEY', '')
 
-# Initialize the AI agent (only if API key is available)
+# Initialize the AI agent (only if API key is available and dependencies load)
 agent = None
 try:
     if os.environ.get('OPENROUTER_API_KEY'):
+        from agent.travel_agent import TravelPlannerAgent
         agent = TravelPlannerAgent()
     else:
         print("Warning: OPENROUTER_API_KEY not set. AI agent features will be unavailable.")
