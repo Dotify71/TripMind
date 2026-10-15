@@ -105,13 +105,20 @@ class ItineraryRequest(BaseModel):
     description: Optional[str] = None
     itinerary_data: Optional[Dict[str, Any]] = None
 
-# Serve static files
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# Serve static files with absolute path resolution for serverless environments
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+STATIC_DIR = os.path.join(BASE_DIR, "static")
+
+if os.path.exists(STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 @app.get("/")
 async def read_root():
     """Serve the main HTML page."""
-    return FileResponse("static/index.html")
+    index_path = os.path.join(STATIC_DIR, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    return {"status": "ok", "message": "TripMind API is running"}
 
 import secrets
 from passlib.context import CryptContext

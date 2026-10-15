@@ -137,7 +137,10 @@ class CalendarEvent(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 def init_db():
-    Base.metadata.create_all(bind=engine)
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        logger.warning("init_db failed or skipped on serverless: %s", e)
 
 def get_db():
     db = SessionLocal()
