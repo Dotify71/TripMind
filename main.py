@@ -121,18 +121,27 @@ async def read_root():
     return {"status": "ok", "message": "TripMind API is running"}
 
 import secrets
-from passlib.context import CryptContext
-
-# Password hashing context using bcrypt
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+import hashlib
+import hmac
 
 def hash_password(password: str) -> str:
-    """Hash a password using bcrypt."""
-    return pwd_context.hash(password)
+    """Hash password using robust PBKDF2-HMAC-SHA256 (compatible with all Python versions and serverless)."""
+    salt = secrets.token_hex(16)
+    key = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), 100000)
+    return f"pbkdf2:sha256:100000${salt}${key.hex()}"
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password against a hash."""
-    return pwd_context.verify(plain_password, hashed_password)
+    """Verify password against stored hash."""
+    try:
+        if hashed_password.startswith("pbkdf2:sha256:"):
+            _, _, salt, stored_key = hashed_password.split("$")
+            new_key = hashlib.pbkdf2_hmac("sha256", plain_password.encode("utf-8"), salt.encode("utf-8"), 100000)
+            return hmac.compare_digest(new_key.hex(), stored_key)
+        # Fallback for bcrypt if present
+        import bcrypt
+        return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
+    except Exception:
+        return False
 
 def generate_token() -> str:
     """Generate a secure random token."""
